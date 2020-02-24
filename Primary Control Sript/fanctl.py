@@ -169,12 +169,12 @@ def connectToSocket(sock,ip,port,attempts):
 
 # Set BMC fan mode to full allowing for manual control
 def set_fan_mode_full():
-	subprocess.check_output("/usr/local/bin/ipmitool raw 0x30 0x45 0x01 1",shell=True)
+	subprocess.check_output("ipmitool raw 0x30 0x45 0x01 1",shell=True)
 	time.sleep(5)
 
 # BMC reset function called in case of CPU fan errors
 def reset_bmc():
-	subprocess.check_output("/usr/local/bin/ipmitool bmc reset cold",shell=True)
+	subprocess.check_output("ipmitool bmc reset cold",shell=True)
 	time.sleep(5)
 
 # Close log file on SIGTERM
@@ -335,7 +335,7 @@ while True:
 			print("ERROR: CPU fan reading is " + str(cpu_fan_speed) + " RPM. BMC fail count at " + str(bmc_fail_count) + "/" + str(bmc_fail_threshold) + ".", end = "")
 			print(" Attempting to set fan mode and apply " + str(cpu_fan_duty) + "% duty cycle again.",flush=True)
 			set_fan_mode_full()
-			subprocess.check_output("/usr/local/bin/ipmitool raw 0x30 0x70 0x66 0x01 0 " + str(cpu_fan_duty),shell=True)
+			subprocess.check_output("ipmitool raw 0x30 0x70 0x66 0x01 0 " + str(cpu_fan_duty),shell=True)
 		# If we get enough bad readings, reset BMC fan mode and cold reset BMC
 		elif bmc_fail_count > bmc_fail_threshold:
 			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
