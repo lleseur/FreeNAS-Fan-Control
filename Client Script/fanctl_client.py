@@ -4,7 +4,7 @@ import pigpio, time, socket, os, subprocess, signal, sys, datetime
 from threading import Thread
 
 # Set up log file
-log_file = "/home/ctl/logs/fanctl.log"
+log_file = "/var/log/fanctl.log"
 log = open(log_file,'w')
 sys.stdout = log
 sys.stderr = log
@@ -166,19 +166,19 @@ sock_display = socket.socket()
 # Loop continually
 while 1:
 	# If we aren't connected to the display (as we won't be when this first runs), attempt to connect
-	if connectedToDisplay == False:
-		connect_t2 = time.time()
-		if connect_t2 - connect_t1 > 5:
-			try:
-				sock_display.connect(("10.0.10.100", 10000))
-				print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-				print("Connected to display at " + sock_display.getpeername()[0],flush=True)
-				connectedToDisplay = True
-			except:
-				print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-				print("Connection error with display, trying again in 5 sec",flush=True)
-				connect_t1 = connect_t2
-				pass
+#	if connectedToDisplay == False:
+#		connect_t2 = time.time()
+#		if connect_t2 - connect_t1 > 5:
+#			try:
+#				sock_display.connect(("10.0.10.100", 10000))
+#				print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#				print("Connected to display at " + sock_display.getpeername()[0],flush=True)
+#				connectedToDisplay = True
+#			except:
+#				print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#				print("Connection error with display, trying again in 5 sec",flush=True)
+#				connect_t1 = connect_t2
+#				pass
 
 	# Detect if the duty cycle ramp is finished. If it is, stop the ramp and reset the RPM tick tally
 	if cycleUpdate == True and (ramp == dutyCycle or oldDuty == dutyCycle):
@@ -213,22 +213,23 @@ while 1:
 		pwm_t1 = pwm_t2
 
 	# Sends updated data to the display, including fan duty cycle, RPM, and ambient temp
-	displayText_old = displayText
-	if cycleUpdate == True:
+#	displayText_old = displayText
+#	if cycleUpdate == True:
 		# If we're in the middle of a ramp, show the old duty cycle, the new duty cycle, the current ramp value, and temperature
-		displayText = "Fans " + str(ramp) + "% (" + str(oldDuty) + "% -> " + str(dutyCycle) + "%);" + ambTemp
-	else:
+#		displayText = "Fans " + str(ramp) + "% (" + str(oldDuty) + "% -> " + str(dutyCycle) + "%);" + ambTemp
+#	else:
 		# If we're not in a ramp, just show current duty cycle, rpm, and temperature
-		displayText = "Fans " + str(dutyCycle) + "% @ " + rpms + " RPM;" + ambTemp
+#		displayText = "Fans " + str(dutyCycle) + "% @ " + rpms + " RPM;" + ambTemp
 	# Attempt to send the data to the display. If we can't, set the "connectedToDisplay" value to False so we attempt to reconnect next loop.
 	# We don't want our PWM updates to stop because we can't connect to the display, so this is set up to not block.
-	if displayText_old != displayText:
-		try:
-			sock_display.send(displayText.encode("utf-8"))
-		except:
-			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-			print("Not connected to display web socket!",flush=True)
-			connectedToDisplay = False
-			sock_display.close()
-			sock_display = socket.socket()
-			pass
+#	if displayText_old != displayText:
+#		try:
+#			sock_display.send(displayText.encode("utf-8"))
+#		except:
+#			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#			print("Not connected to display web socket!",flush=True)
+#			connectedToDisplay = False
+#			sock_display.close()
+#			sock_display = socket.socket()
+#			pass
+
