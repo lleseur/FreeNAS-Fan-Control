@@ -36,7 +36,7 @@ hd_duty_list  = [25,30,40,50,75,100]
 
 # Connections informations
 # Access to shelves
-shelvesAccess = [ "10.0.10.1", "10.0.10.2" ]
+shelvesAccess = [ "172.16.100.8" ]
 
 # Path to log file
 log_file = "/var/log/fanctl.log"
