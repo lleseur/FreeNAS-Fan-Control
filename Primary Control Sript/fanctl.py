@@ -34,15 +34,19 @@ cpu_duty_list = [50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,
 hd_temp_list  = [36,37,38,39,40,41 ]
 hd_duty_list  = [25,30,40,50,75,100]
 
+# Connections informations
+# Access to shelves
+shelvesAccess = [ "10.0.10.1", "10.0.10.2" ]
+
 # Path to log file
-log_file = "/mnt/tank/usr/jfr/logs/fanctl.log"
+log_file = "/var/log/fanctl.log"
 
 # Misc. variables
 cpu_override_temp = 70			# CPU temp at which HD fans should spin up to help with cooling
 cpu_max_fan_speed = 1800		# Max RPM of CPU fan, used to check BMC is functioning
-cpu_fan_header = "FAN1"			# Header to which CPU fan(s) are connected, used to check fan speed
-num_chassis = 2					# Number of chassis on system (head unit + # of shelves)
-num_disks = 40
+cpu_fan_header = "Fan1"			# Header to which CPU fan(s) are connected, used to check fan speed
+num_chassis = 1					# Number of chassis on system (head unit + # of shelves)
+num_disks = 1
 hd_polling_interval = 60		# How often (in seconds) to check HD temps
 bmc_fail_threshold = 5			# If CPU fan speed is wrong this many times in a row, reset BMC
 bmc_reboot_grace_time = 240		# If BMC has to reset, how long to wait in seconds for it to reboot
@@ -67,7 +71,7 @@ disk_05 = {"serial": "", "shelf": 0, "position": 5,  "node": "", "temp": 0}
 disk_06 = {"serial": "", "shelf": 0, "position": 6,  "node": "", "temp": 0}
 disk_07 = {"serial": "", "shelf": 0, "position": 7,  "node": "", "temp": 0}
 disk_08 = {"serial": "", "shelf": 0, "position": 8,  "node": "", "temp": 0}
-disk_09 = {"serial": "", "shelf": 0, "position": 9,  "node": "", "temp": 0}
+disk_09 = {"serial": "ZJV2RWYY0000C91099EM", "shelf": 0, "position": 9,  "node": "", "temp": 0}
 disk_10 = {"serial": "", "shelf": 0, "position": 10, "node": "", "temp": 0}
 disk_11 = {"serial": "", "shelf": 0, "position": 11, "node": "", "temp": 0}
 disk_12 = {"serial": "", "shelf": 0, "position": 12, "node": "", "temp": 0}
@@ -112,18 +116,9 @@ disk_48 = {"serial": "", "shelf": 1, "position": 24, "node": "", "temp": 0}
 
 ### System variables
 # Aggregate disks for easier iteration
-hd_list = [disk_01,disk_02,disk_03,disk_04,disk_05,disk_06,disk_07,disk_08,disk_09,disk_10,
-		   disk_11,disk_12,disk_13,disk_14,disk_15,disk_16,disk_17,disk_18,disk_19,disk_20,
-		   disk_21,disk_22,disk_23,disk_24,disk_25,disk_26,disk_27,disk_28,disk_29,disk_30,
-		   disk_31,disk_32,disk_33,disk_34,disk_35,disk_36,disk_37,disk_38,disk_39,disk_40,
-		   disk_41,disk_42,disk_43,disk_44,disk_45,disk_46,disk_47,disk_48]
-shelf_0 = [disk_01,disk_02,disk_03,disk_04,disk_05,disk_06,disk_07,disk_08,disk_09,disk_10,
-		   disk_11,disk_12,disk_13,disk_14,disk_15,disk_16,disk_17,disk_18,disk_19,disk_20,
-		   disk_21,disk_22,disk_23,disk_24]
-shelf_1 = [disk_25,disk_26,disk_27,disk_28,disk_29,disk_30,disk_31,disk_32,disk_33,disk_34,
-		   disk_35,disk_36,disk_37,disk_38,disk_39,disk_40,disk_41,disk_42,disk_43,disk_44,
-		   disk_45,disk_46,disk_47,disk_48]
-shelves = [shelf_0,shelf_1]
+shelf_0 = [disk_09]
+hd_list = shelf_0
+shelves = [shelf_0]
 
 # Initialize other system variables
 cpu_fan_unreadable_time = 0
@@ -206,22 +201,21 @@ shelf_sock = [""] * num_chassis
 port = 10000
 for shelf in range(0,num_chassis):
 	shelf_sock[shelf] = socket.socket()
-	connectToSocket(shelf_sock[shelf],"10.0.10." + str(shelf),port,0)
+	connectToSocket(shelf_sock[shelf],shelvesAccess[shelf],port,0)
 
 # Connect via sockets to the display device
-disp_sock = socket.socket()
-connectToSocket(disp_sock,"10.0.10.100",port,0)
+#disp_sock = socket.socket()
+#connectToSocket(disp_sock,"10.0.10.100",port,0)
 
 # Populate HD List, get all disks from sysctl -n kern.disks command and split output into list
-nodes = subprocess.check_output("/sbin/sysctl -n kern.disks",shell=True).decode("utf-8").replace("\n","")
-node_list = nodes.split(" ")
+node_list = subprocess.check_output("lsblk -ndoNAME",shell=True).decode("utf-8").split("\n")
 for node in node_list:
 	# Attempt to run smartctl -i on each disk, remove the disks that don't support smartctl
 	try:
-		smart = subprocess.check_output("/usr/local/sbin/smartctl -i /dev/" + node,shell=True).decode("utf-8")
+		smart = subprocess.check_output("smartctl -i /dev/" + node,shell=True).decode("utf-8")
 	except:
 		node_list.remove(node)
-		break
+		continue
 	# Remove SSDs from the list
 	node_type = re.search(r'(.*?Rotation.*?)\n',smart)[0]
 	if "Solid State Device" in node_type:
@@ -246,23 +240,23 @@ for node in node_list:
 while True:
 	### CPU temp check and duty cycle management
 	# Check all CPU core temps, determine max temp, map temp to duty cycle
-	core_temps = subprocess.check_output("/sbin/sysctl -a dev.cpu | egrep -E \"dev.cpu.[0-9]+.temperature\" | awk \'{print $2}\' | sed \'s/.$//\'",shell=True)
+	core_temps = subprocess.check_output("sensors | grep -oP 'Core.*?\+\K[0-9.]+'",shell=True)
 	core_temps = core_temps.decode("utf-8").split()
 	
 	# Prefix cpu temp data with "cpu;" so display knows which data type it is
-	cpu_temp_list_str = "cpu;"
-	for temp in core_temps:
-		cpu_temp_list_str += str(int(float(temp))) + " "
-	cpu_temp_list_str = cpu_temp_list_str.strip()
+#	cpu_temp_list_str = "cpu;"
+#	for temp in core_temps:
+#		cpu_temp_list_str += str(int(float(temp))) + " "
+#	cpu_temp_list_str = cpu_temp_list_str.strip()
 
 	# Attempt to send CPU temp data to display; if unsuccessful, attempt to reconnect.
-	try:
-		disp_sock.send(cpu_temp_list_str.encode("utf-8"))
-	except:
-		print("ERROR: Could not send to display web socket! Attempting to reconnect now...",flush=True)
-		disp_sock.close()
-		disp_sock = socket.socket()
-		connectToSocket(disp_sock,"10.0.10.100",port,5)
+#	try:
+#		disp_sock.send(cpu_temp_list_str.encode("utf-8"))
+#	except:
+#		print("ERROR: Could not send to display web socket! Attempting to reconnect now...",flush=True)
+#		disp_sock.close()
+#		disp_sock = socket.socket()
+#		connectToSocket(disp_sock,"10.0.10.100",port,5)
 
 	# Determine max core temp; look up this temp in duty cycle mapping
 	cpu_temp = int(float(max(core_temps)))
@@ -288,23 +282,23 @@ while True:
 		if cpu_debug:
 			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
 			print("CPU at " + str(cpu_temp) + "*C, setting CPU fans " + str(cpu_fan_duty) + "%",flush=True)
-		subprocess.check_output("/usr/local/bin/ipmitool raw 0x30 0x70 0x66 0x01 0 " + str(cpu_fan_duty),shell=True)
+		subprocess.check_output("ipmitool raw 0x30 0x70 0x66 0x01 0 " + str(cpu_fan_duty),shell=True)
 		last_cpu_fan_change_time = int(time.time())
 
 	### CPU fan speed verification
 	# Check that fan speed is being reported by ipmitool and that the reading is non-zero and not above max fan speed
-	cpu_fan_speed = subprocess.check_output("/usr/local/bin/ipmitool sdr | grep " + cpu_fan_header,shell=True).decode("utf-8").split()[2]
+	cpu_fan_speed = subprocess.check_output("ipmitool sdr | grep " + cpu_fan_header,shell=True).decode("utf-8").split()[2]
 	
 	# Use this data to send fan speed data to display. Attempt to send data to display; attempt to reconnect on failure
-	cpu_fan_disp = "cpu_fans;Fans " + str(cpu_fan_duty) + "% @ " + str(cpu_fan_speed) + " RPM;" + str(psutil.cpu_percent())
-	try:
-		disp_sock.send(cpu_fan_disp.encode("utf-8"))
-	except:
-		print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-		print("ERROR: Could not send to display web socket! Attempting to reconnect now...",flush=True)
-		disp_sock.close()
-		disp_sock = socket.socket()
-		connectToSocket(disp_sock,"10.0.10.100",port,5)
+#	cpu_fan_disp = "cpu_fans;Fans " + str(cpu_fan_duty) + "% @ " + str(cpu_fan_speed) + " RPM;" + str(psutil.cpu_percent())
+#	try:
+#		disp_sock.send(cpu_fan_disp.encode("utf-8"))
+#	except:
+#		print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#		print("ERROR: Could not send to display web socket! Attempting to reconnect now...",flush=True)
+#		disp_sock.close()
+#		disp_sock = socket.socket()
+#		connectToSocket(disp_sock,"10.0.10.100",port,5)
 
 	# Detect errors with output of cpu fan check command
 	if cpu_fan_speed == "no" or cpu_fan_speed == "disabled":
@@ -362,7 +356,7 @@ while True:
 		hd_temps = "hdd;"
 		for hd in hd_list:
 			try:
-				disk_temp = subprocess.check_output("/usr/local/sbin/smartctl -A /dev/" + hd["node"] + " | grep Temperature_Celsius",shell=True)
+				disk_temp = subprocess.check_output("smartctl -A /dev/" + hd["node"] + " | grep Temperature_Celsius",shell=True)
 				disk_temp = disk_temp.decode("utf-8").replace("\n","")
 				hd["temp"] = int(disk_temp.split()[9])
 				hd_temps += str(hd["temp"]) + " "
@@ -395,16 +389,16 @@ while True:
 			print("Shelf " + str(shelf) + " max temp: " + str(max_hd_temp[shelf]) + "*C, setting HDD fans to " + str(hd_fan_duty[shelf]) + "%",flush=True)
 
 		# Send HDD fan speed values to display. Attempt to reconnect on error.
-		if debug:
-			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-			print("Sending to display: " + hd_temps,flush=True)
-		try:
-			disp_sock.send(hd_temps.encode("utf-8"))
-		except:
-			print("ERROR: Could not send to display web socket! Attempting to reconnect now...",flush=True)
-			disp_sock.close()
-			disp_sock = socket.socket()
-			connectToSocket(disp_sock,"10.0.10.100",port,5)
+#		if debug:
+#			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#			print("Sending to display: " + hd_temps,flush=True)
+#		try:
+#			disp_sock.send(hd_temps.encode("utf-8"))
+#		except:
+#			print("ERROR: Could not send to display web socket! Attempting to reconnect now...",flush=True)
+#			disp_sock.close()
+#			disp_sock = socket.socket()
+#			connectToSocket(disp_sock,"10.0.10.100",port,5)
 
 		# Send HDD fan speed commands to controllers. Attempt to reconnect on error.
 		for x in range(0,num_chassis):
@@ -417,7 +411,8 @@ while True:
 				print("ERROR: Could not send to shelf " + str(x) + " web socket! Attempting to reconnect now...",flush=True)
 				shelf_sock[x].close()
 				shelf_sock[x] = socket.socket()
-				connectToSocket(shelf_sock[x],"10.0.10." + str(x),port,5)
+				connectToSocket(shelf_sock[x],shelvesAccess[x],port,5)
 
 	# Provide a small grace period between iterations; temps don't change much in a one-second span
 	time.sleep(1)
+
