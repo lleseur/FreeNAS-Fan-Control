@@ -120,6 +120,11 @@ shelf_0 = [disk_09]
 hd_list = shelf_0
 shelves = [shelf_0]
 
+# OS detection
+os = subprocess.check_output("uname").decode("utf-8").replace("\n", "")
+if os != "Linux" and os != "FreeBSD":
+	sys.exit("Fatal: Operating system " + os + " not supported")
+
 # Initialize other system variables
 cpu_fan_unreadable_time = 0
 bmc_fail_count = 0
@@ -208,7 +213,11 @@ for shelf in range(0,num_chassis):
 #connectToSocket(disp_sock,"10.0.10.100",port,0)
 
 # Populate HD List, get all disks from sysctl -n kern.disks command and split output into list
-node_list = subprocess.check_output("lsblk -ndoNAME",shell=True).decode("utf-8").split("\n")
+if os == "Linux":
+	node_list = subprocess.check_output("lsblk -ndoNAME",shell=True).decode("utf-8").split("\n")
+elif os == "FreeBSD":
+	node_list = subprocess.check_output("sysctl -n kern.disks",shell=True).decode("utf-8").replace("\n","").split(" ")
+
 for node in node_list:
 	# Attempt to run smartctl -i on each disk, remove the disks that don't support smartctl
 	try:
@@ -240,8 +249,10 @@ for node in node_list:
 while True:
 	### CPU temp check and duty cycle management
 	# Check all CPU core temps, determine max temp, map temp to duty cycle
-	core_temps = subprocess.check_output("sensors | grep -oP 'Core.*?\+\K[0-9.]+'",shell=True)
-	core_temps = core_temps.decode("utf-8").split()
+	if os == "Linux":
+		core_temps = subprocess.check_output("sensors | grep -oP 'Core.*?\+\K[0-9.]+'",shell=True).decode("utf-8").split()
+	elif os == "FreeBSD":
+		core_temps = subprocess.check_output("sysctl -a dev.cpu | egrep -E \"dev.cpu.[0-9]+.temperature\" | awk \'{print $2}\' | sed \'s/.$//\'",shell=True).decode("utf-8").split()
 	
 	# Prefix cpu temp data with "cpu;" so display knows which data type it is
 #	cpu_temp_list_str = "cpu;"
