@@ -25,100 +25,52 @@
 # signal to close log file on script termination (SIGTERM)
 # socket to connect to controllers and display
 # psutil to get cpu load info
-import time, datetime, subprocess, re, sys, signal, socket, psutil
+import time, datetime, subprocess, re, sys, signal, socket, psutil, configparser
 
-### User-editable variables
-# CPU and HDD temps (in C) map to duty cycles below
-cpu_temp_list = [30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55 ]
-cpu_duty_list = [50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96,98,100]
-hd_temp_list  = [36,37,38,39,40,41 ]
-hd_duty_list  = [25,30,40,50,75,100]
+### Parse configuration
+
+config = configparser.ConfigParser()
+config.read('fanctl.ini')
+
+# CPU and HDD temps (in C) map to duty cycles
+cpu_temp_list = config['TempsMap']['cpu_temp_list'].split()
+cpu_duty_list = config['TempsMap']['cpu_duty_list'].split()
+hd_temp_list = config['TempsMap']['hd_temp_list'].split()
+hd_duty_list = config['TempsMap']['hd_duty_list'].split()
 
 # Connections informations
-# Access to shelves
-shelvesAccess = [ "172.16.100.8" ]
-
-# Path to log file
-log_file = "/var/log/fanctl.log"
+shelvesAccess = [config['ShelvesAccess'][k] for k in config['ShelvesAccess']]
 
 # Misc. variables
-cpu_override_temp = 70			# CPU temp at which HD fans should spin up to help with cooling
-cpu_max_fan_speed = 1800		# Max RPM of CPU fan, used to check BMC is functioning
-cpu_fan_header = "Fan1"			# Header to which CPU fan(s) are connected, used to check fan speed
-num_chassis = 1					# Number of chassis on system (head unit + # of shelves)
-num_disks = 1
-hd_polling_interval = 60		# How often (in seconds) to check HD temps
-bmc_fail_threshold = 5			# If CPU fan speed is wrong this many times in a row, reset BMC
-bmc_reboot_grace_time = 240		# If BMC has to reset, how long to wait in seconds for it to reboot
-debug = True 					# Print debug messages to log
-cpu_debug = False 				# Print CPU temps to log
+log_file = config['Misc']['log_file']
+cpu_override_temp = int(config['Misc']['cpu_override_temp'])
+cpu_max_fan_speed = int(config['Misc']['cpu_max_fan_speed'])
+cpu_fan_header = config['Misc']['cpu_fan_header']
+num_chassis = int(config['Misc']['num_chassis'])
+num_disks = int(config['Misc']['num_disks'])
+hd_polling_interval = int(config['Misc']['hd_polling_interval'])
+bmc_fail_threshold = int(config['Misc']['bmc_fail_threshold'])
+bmc_reboot_grace_time = int(config['Misc']['bmc_reboot_grace_time'])
+debug = config['Misc'].getboolean('debug')
+cpu_debug = config['Misc'].getboolean('cpu_debug')
 
-### Disk identification info
+# disk identification info
 # Used to map device nodes to physical disk location for arduino display. Starts with disk
 # in top left slot of chassis continuing along top row like so:
 #
 #	[ 01 | 02 | 03 | 04 ]
 #	[ 05 | 06 | 07 | 08 ]
 #	[    ... etc ...    ]
-#
-# Identification algorithm relies on disk serial number; enter them in list below
-# Shelf 00 disks:
-disk_01 = {"serial": "", "shelf": 0, "position": 1,  "node": "", "temp": 0}
-disk_02 = {"serial": "", "shelf": 0, "position": 2,  "node": "", "temp": 0}
-disk_03 = {"serial": "", "shelf": 0, "position": 3,  "node": "", "temp": 0}
-disk_04 = {"serial": "", "shelf": 0, "position": 4,  "node": "", "temp": 0}
-disk_05 = {"serial": "", "shelf": 0, "position": 5,  "node": "", "temp": 0}
-disk_06 = {"serial": "", "shelf": 0, "position": 6,  "node": "", "temp": 0}
-disk_07 = {"serial": "", "shelf": 0, "position": 7,  "node": "", "temp": 0}
-disk_08 = {"serial": "", "shelf": 0, "position": 8,  "node": "", "temp": 0}
-disk_09 = {"serial": "ZJV2RWYY0000C91099EM", "shelf": 0, "position": 9,  "node": "", "temp": 0}
-disk_10 = {"serial": "", "shelf": 0, "position": 10, "node": "", "temp": 0}
-disk_11 = {"serial": "", "shelf": 0, "position": 11, "node": "", "temp": 0}
-disk_12 = {"serial": "", "shelf": 0, "position": 12, "node": "", "temp": 0}
-disk_13 = {"serial": "", "shelf": 0, "position": 13, "node": "", "temp": 0}
-disk_14 = {"serial": "", "shelf": 0, "position": 14, "node": "", "temp": 0}
-disk_15 = {"serial": "", "shelf": 0, "position": 15, "node": "", "temp": 0}
-disk_16 = {"serial": "", "shelf": 0, "position": 16, "node": "", "temp": 0}
-disk_17 = {"serial": "", "shelf": 0, "position": 17, "node": "", "temp": 0}
-disk_18 = {"serial": "", "shelf": 0, "position": 18, "node": "", "temp": 0}
-disk_19 = {"serial": "", "shelf": 0, "position": 19, "node": "", "temp": 0}
-disk_20 = {"serial": "", "shelf": 0, "position": 20, "node": "", "temp": 0}
-disk_21 = {"serial": "", "shelf": 0, "position": 21, "node": "", "temp": 0}
-disk_22 = {"serial": "", "shelf": 0, "position": 22, "node": "", "temp": 0}
-disk_23 = {"serial": "", "shelf": 0, "position": 23, "node": "", "temp": 0}
-disk_24 = {"serial": "", "shelf": 0, "position": 24, "node": "", "temp": 0}
 
-# Shelf 01 disks:
-disk_25 = {"serial": "", "shelf": 1, "position": 1,  "node": "", "temp": 0}
-disk_26 = {"serial": "", "shelf": 1, "position": 2,  "node": "", "temp": 0}
-disk_27 = {"serial": "", "shelf": 1, "position": 3,  "node": "", "temp": 0}
-disk_28 = {"serial": "", "shelf": 1, "position": 4,  "node": "", "temp": 0}
-disk_29 = {"serial": "", "shelf": 1, "position": 5,  "node": "", "temp": 0}
-disk_30 = {"serial": "", "shelf": 1, "position": 6,  "node": "", "temp": 0}
-disk_31 = {"serial": "", "shelf": 1, "position": 7,  "node": "", "temp": 0}
-disk_32 = {"serial": "", "shelf": 1, "position": 8,  "node": "", "temp": 0}
-disk_33 = {"serial": "", "shelf": 1, "position": 9,  "node": "", "temp": 0}
-disk_34 = {"serial": "", "shelf": 1, "position": 10, "node": "", "temp": 0}
-disk_35 = {"serial": "", "shelf": 1, "position": 11, "node": "", "temp": 0}
-disk_36 = {"serial": "", "shelf": 1, "position": 12, "node": "", "temp": 0}
-disk_37 = {"serial": "", "shelf": 1, "position": 13, "node": "", "temp": 0}
-disk_38 = {"serial": "", "shelf": 1, "position": 14, "node": "", "temp": 0}
-disk_39 = {"serial": "", "shelf": 1, "position": 15, "node": "", "temp": 0}
-disk_40 = {"serial": "", "shelf": 1, "position": 16, "node": "", "temp": 0}
-disk_41 = {"serial": "", "shelf": 1, "position": 17, "node": "", "temp": 0}
-disk_42 = {"serial": "", "shelf": 1, "position": 18, "node": "", "temp": 0}
-disk_43 = {"serial": "", "shelf": 1, "position": 19, "node": "", "temp": 0}
-disk_44 = {"serial": "", "shelf": 1, "position": 20, "node": "", "temp": 0}
-disk_45 = {"serial": "", "shelf": 1, "position": 21, "node": "", "temp": 0}
-disk_46 = {"serial": "", "shelf": 1, "position": 22, "node": "", "temp": 0}
-disk_47 = {"serial": "", "shelf": 1, "position": 23, "node": "", "temp": 0}
-disk_48 = {"serial": "", "shelf": 1, "position": 24, "node": "", "temp": 0}
+hd_list = []
+shelves = [[]] * num_chassis
+for k in config['Disks']:
+	diskInfo = config['Disks'][k].split(",")
+	disk = {"serial": diskInfo[0], "shelf": int(diskInfo[1]), "position": int(diskInfo[2]), "node": "", "temp": 0}
+	hd_list.append(disk)
+	shelves[int(diskInfo[1])].append(disk)
 
 ### System variables
-# Aggregate disks for easier iteration
-shelf_0 = [disk_09]
-hd_list = shelf_0
-shelves = [shelf_0]
 
 # OS detection
 os = subprocess.check_output("uname").decode("utf-8").replace("\n", "")
@@ -138,19 +90,12 @@ sys.stdout = log
 sys.stderr = log
 
 # Generate per-shelf variables
-hd_fan_duty = []
-for x in range(0,num_chassis):
-	hd_fan_duty.append(0)
-
-max_hd_temp = []
-for x in range(0,num_chassis):
-	max_hd_temp.append(0)
-
-shelf_tty = []
-for x in range(0,num_chassis):
-	shelf_tty.append(0)
+hd_fan_duty = [0] * num_chassis
+max_hd_temp = [0] * num_chassis
+shelf_tty = [0] * num_chassis
 
 ### Pre-loop setup/info gathering
+
 # Attempt to connect to a web socket at IP and port for a given number of attempts; attempts = 0 means indefinite retries
 def connectToSocket(sock,ip,port,attempts):
 	connected = False
@@ -225,6 +170,7 @@ for node in node_list:
 	except:
 		node_list.remove(node)
 		continue
+
 	# Remove SSDs from the list
 	node_type = re.search(r'(.*?Rotation.*?)\n',smart)[0]
 	if "Solid State Device" in node_type:
@@ -246,6 +192,7 @@ for node in node_list:
 # 	for a certain amount of time, verify that the fan speed reading is sane. If not, reset BMC.
 # 2) Check HD temps every so often via smartctl, record all temps, determine max temp in each shelf, map max temp to
 # 	duty cycle, set duty cycle via socket connection to controller in each shelf and send temp data to display unit.
+
 while True:
 	### CPU temp check and duty cycle management
 	# Check all CPU core temps, determine max temp, map temp to duty cycle
@@ -253,7 +200,7 @@ while True:
 		core_temps = subprocess.check_output("sensors | grep -oP 'Core.*?\+\K[0-9.]+'",shell=True).decode("utf-8").split()
 	elif os == "FreeBSD":
 		core_temps = subprocess.check_output("sysctl -a dev.cpu | egrep -E \"dev.cpu.[0-9]+.temperature\" | awk \'{print $2}\' | sed \'s/.$//\'",shell=True).decode("utf-8").split()
-	
+
 	# Prefix cpu temp data with "cpu;" so display knows which data type it is
 #	cpu_temp_list_str = "cpu;"
 #	for temp in core_temps:
@@ -287,7 +234,7 @@ while True:
 			last_hd_check_time = 0
 	else:
 		hd_fan_override = False
-	
+
 	# Set CPU fan duty cycle through IPMI if new duty cycle selected
 	if cpu_fan_duty != last_cpu_fan_duty:
 		if cpu_debug:
@@ -299,7 +246,7 @@ while True:
 	### CPU fan speed verification
 	# Check that fan speed is being reported by ipmitool and that the reading is non-zero and not above max fan speed
 	cpu_fan_speed = subprocess.check_output("ipmitool sdr | grep " + cpu_fan_header,shell=True).decode("utf-8").split()[2]
-	
+
 	# Use this data to send fan speed data to display. Attempt to send data to display; attempt to reconnect on failure
 #	cpu_fan_disp = "cpu_fans;Fans " + str(cpu_fan_duty) + "% @ " + str(cpu_fan_speed) + " RPM;" + str(psutil.cpu_percent())
 #	try:
@@ -362,7 +309,7 @@ while True:
 
 		# Zero HD max temps for each shelf
 		for x in range(0,len(max_hd_temp)): max_hd_temp[x] = 0
-		
+
 		# Get all disk temps by running smartctl on each disk
 		hd_temps = "hdd;"
 		for hd in hd_list:
