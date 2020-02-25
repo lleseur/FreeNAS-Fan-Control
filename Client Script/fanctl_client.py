@@ -156,12 +156,12 @@ sock.start()
 ambTemp = read_temp()
 
 # Set starting text for the display
-displayText = "Fans @ 100%;0"
-rpms = "0"
+#displayText = "Fans @ 100%;0"
+#rpms = "0"
 
 # Set up pre-connection stuff for socket connection w/ display
-connectedToDisplay = False
-sock_display = socket.socket()
+#connectedToDisplay = False
+#sock_display = socket.socket()
 
 # Loop continually
 while 1:
@@ -200,7 +200,7 @@ while 1:
 	rpm_t2 = time.time()
 	if rpm_t2 - rpm_t1 >= rpmFreq:
 		ticks = halfRevs.tally()
-		rpms = str(int(ticks / (rpm_t2 - rpm_tDutyChange) / 2 * 60))
+#		rpms = str(int(ticks / (rpm_t2 - rpm_tDutyChange) / 2 * 60))
 		rpm_t1 = rpm_t2
 
 	# This runs every rampSpeed seconds (1 by default) and bumps the duty cycle up or down one tick if we're in
