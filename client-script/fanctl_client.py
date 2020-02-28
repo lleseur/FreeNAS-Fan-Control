@@ -144,7 +144,7 @@ def listen():
 # Stuff to run when the script stops from SIGTERM
 def close_client(signum, frame):
 #	callback.cancel()
-	GPIO.cleanup()
+#	GPIO.cleanup()
 	pi.stop()
 
 signal.signal(signal.SIGTERM,close_client)
