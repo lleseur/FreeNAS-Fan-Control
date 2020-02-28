@@ -89,6 +89,8 @@ override_time = 0
 
 # Redirect stdout and stderr to log file
 if log_file:
+	stdoutOriginal = sys.stdout
+	stderrOriginal = sys.stderr
 	log = open(log_file,'w')
 	sys.stdout = log
 	sys.stderr = log
@@ -133,8 +135,10 @@ def reset_bmc():
 
 # Close log file on SIGTERM
 def close_log(signum, frame):
-	sys.stdout.close()
-	sys.stderr.close()
+	if log_file:
+		sys.stdout = stdoutOriginal
+		sys.stderr = stderrOriginal
+		log.close()
 	for shelf in range(num_chassis):
 		shelf_sock[shelf].close()
 	disp_sock.close()
