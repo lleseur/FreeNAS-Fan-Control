@@ -233,7 +233,7 @@ while True:
 				last_cpu_fan_duty = cpu_fan_duty
 				cpu_fan_duty = cpu_duty_list[cpu_temp_list.index(temp)]
 				break
-	else
+	else:
 		cpu_temp = 0
 		cpu_fan_duty = 0
 		last_cpu_fan_duty = 0
