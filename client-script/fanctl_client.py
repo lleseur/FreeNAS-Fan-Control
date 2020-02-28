@@ -5,9 +5,10 @@ from threading import Thread
 
 # Set up log file
 log_file = "/var/log/fanctl.log"
-log = open(log_file,'w')
-sys.stdout = log
-sys.stderr = log
+if log_file:
+	log = open(log_file,'w')
+	sys.stdout = log
+	sys.stderr = log
 
 # PWM output setup
 pi = pigpio.pi()

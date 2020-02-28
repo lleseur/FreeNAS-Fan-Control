@@ -42,7 +42,10 @@ hd_duty_list = [int(x) for x in config['TempsMap']['hd_duty_list'].split()]
 shelvesAccess = [config['ShelvesAccess'][k] for k in config['ShelvesAccess']]
 
 # Misc. variables
-log_file = config['Misc']['log_file']
+try:
+	log_file = config['Misc']['log_file']
+except:
+	log_file = ""
 cpu_override_temp = int(config['Misc']['cpu_override_temp'])
 cpu_max_fan_speed = int(config['Misc']['cpu_max_fan_speed'])
 cpu_fan_header = config['Misc']['cpu_fan_header']
@@ -85,9 +88,10 @@ last_hd_check_time = 0
 override_time = 0
 
 # Redirect stdout and stderr to log file
-log = open(log_file,'w')
-sys.stdout = log
-sys.stderr = log
+if log_file:
+	log = open(log_file,'w')
+	sys.stdout = log
+	sys.stderr = log
 
 # Generate per-shelf variables
 hd_fan_duty = [0] * num_chassis
