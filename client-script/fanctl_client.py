@@ -34,6 +34,7 @@ dutyCycle = 100
 oldDuty = dutyCycle
 ramp = dutyCycle
 cycleUpdate = False
+sigTerm = False
 
 # Timestamps
 rpm_t1 = time.time()
@@ -60,6 +61,8 @@ def handle(socket):
 
 	# Continually loop while we have a connection
 	while 1:
+		if sigTerm:
+			return
 		# Process received data. This blocks further execution, so nothing below will run until we get new data here.
 		rcvBuffer = socket.recv(MAX_LENGTH).decode("utf-8")
 
@@ -112,6 +115,9 @@ def listen():
 	# Continually listen. The first line blocks. Once we get a connection, start a new thread with the socket handle function and go back
 	# to listening for new connections.
 	while 1:
+		if sigTerm:
+			serversocket.close()
+			return
 		(clientSocket, address) = serversocket.accept()
 		ct = Thread(target=handle, args=(clientSocket,))
 		ct.start()
@@ -145,7 +151,9 @@ def listen():
 def close_client(signum, frame):
 #	callback.cancel()
 #	GPIO.cleanup()
+	sigTerm = True
 	pi.stop()
+	sys.exit()
 
 signal.signal(signal.SIGTERM,close_client)
 

@@ -139,6 +139,7 @@ def close_log(signum, frame):
 		shelf_sock[shelf].close()
 	disp_sock.close()
 	print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - Script terminating.",flush=True)
+	sys.exit()
 
 signal.signal(signal.SIGTERM,close_log)
 
