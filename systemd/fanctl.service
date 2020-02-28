@@ -1,0 +1,21 @@
+[Unit]
+Description=Fan management server daemon
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+ExecStart=/root/FreeNAS-Fan-Control/primary-control-script/fanctl.py
+Restart=always
+RestartSec=30s
+WorkingDirectory=/root/FreeNAS-Fan-Control/primary-control-script
+
+ProtectSystem=full
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+
+[Install]
+Alias=fanctl
+WantedBy=multi-user.target
+
