@@ -4,7 +4,7 @@ import pigpio, time, socket, os, subprocess, signal, sys, datetime
 from threading import Thread
 
 # Set up log file
-log_file = "/var/log/fanctl.log"
+log_file = ""
 if log_file:
 	log = open(log_file,'w')
 	sys.stdout = log
@@ -154,6 +154,7 @@ def close_client(signum, frame):
 #	GPIO.cleanup()
 	sigTerm = True
 	try:
+		currentSocket.shutdown(socket.SHUT_RDWR)
 		currentSocket.close()
 	except:
 		pass
