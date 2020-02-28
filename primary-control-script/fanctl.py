@@ -141,7 +141,7 @@ def close_log(signum, frame):
 		log.close()
 	for shelf in range(num_chassis):
 		shelf_sock[shelf].close()
-	disp_sock.close()
+#	disp_sock.close()
 	print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - Script terminating.",flush=True)
 	sys.exit()
 
