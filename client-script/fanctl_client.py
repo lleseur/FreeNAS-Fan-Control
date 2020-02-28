@@ -159,7 +159,7 @@ def close_client(signum, frame):
 	except:
 		pass
 	pi.stop()
-	sys.exit()
+	os._exit(0)
 
 signal.signal(signal.SIGTERM,close_client)
 
