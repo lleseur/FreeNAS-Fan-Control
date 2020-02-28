@@ -22,10 +22,10 @@ pi.set_pull_up_down(2, pigpio.PUD_UP)
 halfRevs = pi.callback(2)
 
 # Temperature input setup
-os.system("modprobe w1-gpio")
-os.system("modprobe w1-therm")
-sensor_id = subprocess.check_output("ls /sys/bus/w1/devices/ | grep 28-",shell=True).decode("utf-8").replace("\n","")
-temp_sensor = "/sys/bus/w1/devices/" + sensor_id + "/w1_slave"
+#os.system("modprobe w1-gpio")
+#os.system("modprobe w1-therm")
+#sensor_id = subprocess.check_output("ls /sys/bus/w1/devices/ | grep 28-",shell=True).decode("utf-8").replace("\n","")
+#temp_sensor = "/sys/bus/w1/devices/" + sensor_id + "/w1_slave"
 
 # Global vars
 global dutyCycle, oldDuty, ramp, cycleUpdate
@@ -116,29 +116,29 @@ def listen():
 		ct.start()
 
 # Read the temperature data from the attached thermal probe
-def read_temp():
-	# The temperature sensor is a file in /sys/bus/w1/devices/. Read that file and close it.
-	probe = open(temp_sensor, 'r')
-	lines = probe.readlines()
-	probe.close
+#def read_temp():
+#	# The temperature sensor is a file in /sys/bus/w1/devices/. Read that file and close it.
+#	probe = open(temp_sensor, 'r')
+#	lines = probe.readlines()
+#	probe.close
 
 	# Check if the output is valid. If not, attempt to read the file again.
-	while lines[0].strip()[-3:] != 'YES':
-		time.sleep(0.2)
-		probe = open(temp_sensor, 'r')
-		lines = probe.readlines()
-		probe.close
+#	while lines[0].strip()[-3:] != 'YES':
+#		time.sleep(0.2)
+#		probe = open(temp_sensor, 'r')
+#		lines = probe.readlines()
+#		probe.close
 
 	# Locate the actual temperature data from the output
-	temp_output = lines[1].find('t=')
+#	temp_output = lines[1].find('t=')
 
 	# If the output is sane, convert it to F and return the value as a string
-	if temp_output != -1:
-		temp_string = lines[1].strip()[temp_output+2:]
-		temp = float(temp_string) / 1000.0 * 9.0 / 5.0 + 32.0
-		return str(int(temp))
-	else:
-		return 0
+#	if temp_output != -1:
+#		temp_string = lines[1].strip()[temp_output+2:]
+#		temp = float(temp_string) / 1000.0 * 9.0 / 5.0 + 32.0
+#		return str(int(temp))
+#	else:
+#		return 0
 
 # Stuff to run when the script stops from SIGTERM
 def close_client(signum, frame):
@@ -153,7 +153,7 @@ sock = Thread(target=listen)
 sock.start()
 
 # Read the ambient temp for the first time
-ambTemp = read_temp()
+#ambTemp = read_temp()
 
 # Set starting text for the display
 #displayText = "Fans @ 100%;0"
@@ -190,10 +190,10 @@ while 1:
 	# in kind of a dumb way currently. As the thing is looping, it checks the timestamp over and over and if 
 	# enough time has elapsed, it does whatever action is inside the if statement. This first one runs every
 	# tempFreq seconds (10 by default) and reads the ambient temperature.
-	temp_t2 = time.time()
-	if temp_t2 - temp_t1 >= tempFreq:
-		ambTemp = read_temp()
-		temp_t1 = temp_t2
+#	temp_t2 = time.time()
+#	if temp_t2 - temp_t1 >= tempFreq:
+#		ambTemp = read_temp()
+#		temp_t1 = temp_t2
 
 	# This one runs every rpmFreq seconds (1 by default) and calculates the fan RPMs. It runs a rolling average
 	# that keeps going until the next duty cycle update (otherwise the value tends to bounce around a lot)
