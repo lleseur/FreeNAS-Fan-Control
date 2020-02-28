@@ -33,10 +33,10 @@ config = configparser.ConfigParser()
 config.read('fanctl.ini')
 
 # CPU and HDD temps (in C) map to duty cycles
-cpu_temp_list = config['TempsMap']['cpu_temp_list'].split()
-cpu_duty_list = config['TempsMap']['cpu_duty_list'].split()
-hd_temp_list = config['TempsMap']['hd_temp_list'].split()
-hd_duty_list = config['TempsMap']['hd_duty_list'].split()
+cpu_temp_list = [int(x) for x in config['TempsMap']['cpu_temp_list'].split()]
+cpu_duty_list = [int(x) for x in config['TempsMap']['cpu_duty_list'].split()]
+hd_temp_list = [int(x) for x in config['TempsMap']['hd_temp_list'].split()]
+hd_duty_list = [int(x) for x in config['TempsMap']['hd_duty_list'].split()]
 
 # Connections informations
 shelvesAccess = [config['ShelvesAccess'][k] for k in config['ShelvesAccess']]
@@ -162,8 +162,9 @@ if os == "Linux":
 	node_list = subprocess.check_output("lsblk -ndoNAME",shell=True).decode("utf-8").split("\n")
 elif os == "FreeBSD":
 	node_list = subprocess.check_output("sysctl -n kern.disks",shell=True).decode("utf-8").replace("\n","").split(" ")
+node_list_copy = node_list.copy()
 
-for node in node_list:
+for node in node_list_copy:
 	# Attempt to run smartctl -i on each disk, remove the disks that don't support smartctl
 	try:
 		smart = subprocess.check_output("smartctl -i /dev/" + node,shell=True).decode("utf-8")
@@ -201,10 +202,13 @@ for node in node_list:
 while True:
 	### CPU temp check and duty cycle management
 	# Check all CPU core temps, determine max temp, map temp to duty cycle
-	if os == "Linux":
-		core_temps = subprocess.check_output("sensors | grep -oP 'Core.*?\+\K[0-9.]+'",shell=True).decode("utf-8").split()
-	elif os == "FreeBSD":
-		core_temps = subprocess.check_output("sysctl -a dev.cpu | egrep -E \"dev.cpu.[0-9]+.temperature\" | awk \'{print $2}\' | sed \'s/.$//\'",shell=True).decode("utf-8").split()
+	try:
+		if os == "Linux":
+			core_temps = subprocess.check_output("sensors | grep -oP 'Core.*?\+\K[0-9.]+'",shell=True).decode("utf-8").split()
+		elif os == "FreeBSD":
+			core_temps = subprocess.check_output("sysctl -a dev.cpu | egrep -E \"dev.cpu.[0-9]+.temperature\" | awk \'{print $2}\' | sed \'s/.$//\'",shell=True).decode("utf-8").split()
+	except:
+		core_temps = []
 
 	# Prefix cpu temp data with "cpu;" so display knows which data type it is
 #	cpu_temp_list_str = "cpu;"
@@ -222,12 +226,17 @@ while True:
 #		connectToSocket(disp_sock,"10.0.10.100",port,5)
 
 	# Determine max core temp; look up this temp in duty cycle mapping
-	cpu_temp = int(float(max(core_temps)))
-	for temp in cpu_temp_list:
-		if cpu_temp <= temp:
-			last_cpu_fan_duty = cpu_fan_duty
-			cpu_fan_duty = cpu_duty_list[cpu_temp_list.index(temp)]
-			break
+	if core_temps:
+		cpu_temp = int(float(max(core_temps)))
+		for temp in cpu_temp_list:
+			if cpu_temp <= temp:
+				last_cpu_fan_duty = cpu_fan_duty
+				cpu_fan_duty = cpu_duty_list[cpu_temp_list.index(temp)]
+				break
+	else
+		cpu_temp = 0
+		cpu_fan_duty = 0
+		last_cpu_fan_duty = 0
 
 	# If CPU temp is too high, set HD fans to 100% (enter fan check by resetting HD check time)
 	if cpu_temp >= cpu_override_temp:
