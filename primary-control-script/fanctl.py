@@ -172,7 +172,12 @@ for node in node_list:
 		continue
 
 	# Remove SSDs from the list
-	node_type = re.search(r'(.*?Rotation.*?)\n',smart)[0]
+	try:
+		node_type = re.search(r'(.*?Rotation.*?)\n',smart)[0]
+	except:
+		# Some drives don't report rotation at all, ignore them
+		node_list.remove(node)
+		continue
 	if "Solid State Device" in node_type:
 		node_list.remove(node)
 	else:
