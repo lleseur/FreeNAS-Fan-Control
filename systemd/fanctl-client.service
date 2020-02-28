@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/root/FreeNAS-Fan-Control/client-script/fanctl_client.py
+ExecStart=/usr/bin/env python3 /srv/FreeNAS-Fan-Control/client-script/fanctl_client.py
 Restart=always
 RestartSec=10s
-WorkingDirectory=/root/FreeNAS-Fan-Control/client-script
+WorkingDirectory=/srv/FreeNAS-Fan-Control/client-script
 
 ProtectSystem=full
 ProtectHome=yes
