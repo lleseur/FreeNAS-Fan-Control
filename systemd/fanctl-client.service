@@ -1,6 +1,7 @@
 [Unit]
 Description=Fan management client
-After=network.target
+After=network.target pigpiod.service
+Requires=pigpiod.service
 
 [Service]
 Type=simple
