@@ -356,9 +356,10 @@ while True:
 		if hd_fan_override: hd_fan_duty[0] = 100
 
 		# Print drive temps and fan duty cycles to log
-		for shelf in range(0,num_chassis):
-			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-			print("Shelf " + str(shelf) + " max temp: " + str(max_hd_temp[shelf]) + "*C, setting HDD fans to " + str(hd_fan_duty[shelf]) + "%",flush=True)
+		if debug:
+			for shelf in range(0,num_chassis):
+				print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+				print("Shelf " + str(shelf) + " max temp: " + str(max_hd_temp[shelf]) + "*C, setting HDD fans to " + str(hd_fan_duty[shelf]) + "%",flush=True)
 
 		# Send HDD fan speed values to display. Attempt to reconnect on error.
 #		if debug:
