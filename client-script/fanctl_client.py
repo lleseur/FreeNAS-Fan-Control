@@ -35,6 +35,7 @@ oldDuty = dutyCycle
 ramp = dutyCycle
 cycleUpdate = False
 sigTerm = False
+currentSocket = None
 
 # Timestamps
 rpm_t1 = time.time()
@@ -111,12 +112,12 @@ def listen():
 	HOST = client_ip
 	serversocket.bind((HOST, PORT))
 	serversocket.listen(10)
+	currentSocket = serversocket
 
 	# Continually listen. The first line blocks. Once we get a connection, start a new thread with the socket handle function and go back
 	# to listening for new connections.
 	while 1:
 		if sigTerm:
-			serversocket.close()
 			return
 		(clientSocket, address) = serversocket.accept()
 		ct = Thread(target=handle, args=(clientSocket,))
@@ -152,6 +153,10 @@ def close_client(signum, frame):
 #	callback.cancel()
 #	GPIO.cleanup()
 	sigTerm = True
+	try:
+		currentSocket.close()
+	except:
+		pass
 	pi.stop()
 	sys.exit()
 
