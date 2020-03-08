@@ -339,15 +339,15 @@ while True:
 			try:
 				disk_temp = subprocess.check_output("smartctl -A /dev/" + hd["node"] + " | grep Temperature_Celsius",shell=True)
 				disk_temp = disk_temp.decode("utf-8").replace("\n","")
-				if disk_temp:
-					hd["temp"] = int(disk_temp.split()[9])
-				else:
-					disk_temp = subprocess.check_output("smartctl -A /dev/" + hd["node"] + " | grep \"Current Drive Temperature\"", shell=True).decode("utf-8").replace("\n","")
-					hd["temp"] = int(disk.temp.split()[3])
+				hd["temp"] = int(disk_temp.split()[9])
 				hd_temps += str(hd["temp"]) + " "
 			except:
-				hd["temp"] = 0
-				pass
+				try:
+					disk_temp = subprocess.check_output("smartctl -A /dev/" + hd["node"] + " | grep \"Current Drive Temperature\"", shell=True).decode("utf-8").replace("\n","")
+					hd["temp"] = int(disk.temp.split()[3])
+				except:
+					hd["temp"] = 0
+					pass
 			for shelf in range(0,num_chassis):
 				if hd["shelf"] == shelf and hd["temp"] > max_hd_temp[shelf]:
 					max_hd_temp[shelf] = hd["temp"]
