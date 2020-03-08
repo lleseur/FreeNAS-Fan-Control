@@ -125,12 +125,12 @@ def connectToSocket(sock,ip,port,attempts):
 
 # Set BMC fan mode to full allowing for manual control
 def set_fan_mode_full():
-	subprocess.check_output("ipmitool raw 0x30 0x45 0x01 1",shell=True)
+#	subprocess.check_output("ipmitool raw 0x30 0x45 0x01 1",shell=True)
 	time.sleep(5)
 
 # BMC reset function called in case of CPU fan errors
 def reset_bmc():
-	subprocess.check_output("ipmitool bmc reset cold",shell=True)
+#	subprocess.check_output("ipmitool bmc reset cold",shell=True)
 	time.sleep(5)
 
 # Close log file on SIGTERM
@@ -259,16 +259,16 @@ while True:
 		hd_fan_override = False
 
 	# Set CPU fan duty cycle through IPMI if new duty cycle selected
-	if cpu_fan_duty != last_cpu_fan_duty:
-		if cpu_debug:
-			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-			print("CPU at " + str(cpu_temp) + "*C, setting CPU fans " + str(cpu_fan_duty) + "%",flush=True)
-		subprocess.check_output("ipmitool raw 0x30 0x70 0x66 0x01 0 " + str(cpu_fan_duty),shell=True)
-		last_cpu_fan_change_time = int(time.time())
+#	if cpu_fan_duty != last_cpu_fan_duty:
+#		if cpu_debug:
+#			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#			print("CPU at " + str(cpu_temp) + "*C, setting CPU fans " + str(cpu_fan_duty) + "%",flush=True)
+#		subprocess.check_output("ipmitool raw 0x30 0x70 0x66 0x01 0 " + str(cpu_fan_duty),shell=True)
+#		last_cpu_fan_change_time = int(time.time())
 
 	### CPU fan speed verification
 	# Check that fan speed is being reported by ipmitool and that the reading is non-zero and not above max fan speed
-	cpu_fan_speed = subprocess.check_output("ipmitool sdr | grep " + cpu_fan_header,shell=True).decode("utf-8").split()[2]
+#	cpu_fan_speed = subprocess.check_output("ipmitool sdr | grep " + cpu_fan_header,shell=True).decode("utf-8").split()[2]
 
 	# Use this data to send fan speed data to display. Attempt to send data to display; attempt to reconnect on failure
 #	cpu_fan_disp = "cpu_fans;Fans " + str(cpu_fan_duty) + "% @ " + str(cpu_fan_speed) + " RPM;" + str(psutil.cpu_percent())
@@ -282,48 +282,48 @@ while True:
 #		connectToSocket(disp_sock,"10.0.10.100",port,5)
 
 	# Detect errors with output of cpu fan check command
-	if cpu_fan_speed == "no" or cpu_fan_speed == "disabled":
-		cpu_fan_speed = -1
-	try: cpu_fan_speed = int(cpu_fan_speed)
-	except: cpu_fan_speed = -1
+#	if cpu_fan_speed == "no" or cpu_fan_speed == "disabled":
+#		cpu_fan_speed = -1
+#	try: cpu_fan_speed = int(cpu_fan_speed)
+#	except: cpu_fan_speed = -1
 
 	# If fan reading reported an error/no reading, fan speed will be -1. Could be because of BMC reset, so give it some time
-	if cpu_fan_speed < 0:
-		if cpu_fan_unreadable_time == 0:
-			cpu_fan_unreadable_time = int(time.time())
-			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-			print("ERROR: Fan currently unreadable, waiting for BMC reboot grace period",flush=True)
-		if int(time.time()) - cpu_fan_unreadable_time > bmc_reboot_grace_time:
-			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-			print("ERROR: Fan currently unreadable, BMC reboot grace period elapsed, cold resetting BMC",flush=True)
-			set_fan_mode_full()
-			reset_bmc()
-			cpu_fan_unreadable_time = 0
+#	if cpu_fan_speed < 0:
+#		if cpu_fan_unreadable_time == 0:
+#			cpu_fan_unreadable_time = int(time.time())
+#			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#			print("ERROR: Fan currently unreadable, waiting for BMC reboot grace period",flush=True)
+#		if int(time.time()) - cpu_fan_unreadable_time > bmc_reboot_grace_time:
+#			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#			print("ERROR: Fan currently unreadable, BMC reboot grace period elapsed, cold resetting BMC",flush=True)
+#			set_fan_mode_full()
+#			reset_bmc()
+#			cpu_fan_unreadable_time = 0
 
 	# If we did get a fan speed reading, check that it is sane (i.e., not 0 and not above cpu_max_fan_speed by >20% margin)
-	else:
-		cpu_fan_unreadable_time = 0
+#	else:
+#		cpu_fan_unreadable_time = 0
 
 		# If fan reading is not sane, reset BMC after enough consecutive nonsense readings
-		if cpu_fan_speed == 0 or cpu_fan_speed > cpu_max_fan_speed * 1.2:
-			bmc_fail_count += 1
-		else:
-			bmc_fail_count = 0
+#		if cpu_fan_speed == 0 or cpu_fan_speed > cpu_max_fan_speed * 1.2:
+#			bmc_fail_count += 1
+#		else:
+#			bmc_fail_count = 0
 
 		# If we get a single bad reading, just try to reset BMC fan mode and CPU fan duty cycle
-		if bmc_fail_count > 0 and bmc_fail_count <= bmc_fail_threshold:
-			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-			print("ERROR: CPU fan reading is " + str(cpu_fan_speed) + " RPM. BMC fail count at " + str(bmc_fail_count) + "/" + str(bmc_fail_threshold) + ".", end = "")
-			print(" Attempting to set fan mode and apply " + str(cpu_fan_duty) + "% duty cycle again.",flush=True)
-			set_fan_mode_full()
-			subprocess.check_output("ipmitool raw 0x30 0x70 0x66 0x01 0 " + str(cpu_fan_duty),shell=True)
+#		if bmc_fail_count > 0 and bmc_fail_count <= bmc_fail_threshold:
+#			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#			print("ERROR: CPU fan reading is " + str(cpu_fan_speed) + " RPM. BMC fail count at " + str(bmc_fail_count) + "/" + str(bmc_fail_threshold) + ".", end = "")
+#			print(" Attempting to set fan mode and apply " + str(cpu_fan_duty) + "% duty cycle again.",flush=True)
+#			set_fan_mode_full()
+#			subprocess.check_output("ipmitool raw 0x30 0x70 0x66 0x01 0 " + str(cpu_fan_duty),shell=True)
 		# If we get enough bad readings, reset BMC fan mode and cold reset BMC
-		elif bmc_fail_count > bmc_fail_threshold:
-			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
-			print("ERROR: CPU fan reading is " + str(cpu_fan_speed) + " RPM. BMC fail count at " + str(bmc_fail_count) + "/" + str(bmc_fail_threshold) + ". Cold resetting BMC.",flush=True)
-			set_fan_mode_full()
-			reset_bmc()
-			bmc_fail_count = 0
+#		elif bmc_fail_count > bmc_fail_threshold:
+#			print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+#			print("ERROR: CPU fan reading is " + str(cpu_fan_speed) + " RPM. BMC fail count at " + str(bmc_fail_count) + "/" + str(bmc_fail_threshold) + ". Cold resetting BMC.",flush=True)
+#			set_fan_mode_full()
+#			reset_bmc()
+#			bmc_fail_count = 0
 
 	### HD temp check and duty cycle management
 	# Only check drive temps every so often
