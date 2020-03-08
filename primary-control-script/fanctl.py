@@ -343,8 +343,8 @@ while True:
 				hd_temps += str(hd["temp"]) + " "
 			except:
 				try:
-					disk_temp = subprocess.check_output("smartctl -A /dev/" + hd["node"] + " | grep \"Current Drive Temperature\"", shell=True).decode("utf-8").replace("\n","")
-					hd["temp"] = int(disk.temp.split()[3])
+					disk_temp = subprocess.check_output("smartctl -A /dev/" + hd["node"] + " | grep 'Current Drive Temperature'", shell=True).decode("utf-8").replace("\n","")
+					hd["temp"] = int(disk_temp.split()[3])
 				except:
 					hd["temp"] = 0
 					pass
