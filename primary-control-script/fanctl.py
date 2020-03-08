@@ -347,7 +347,9 @@ while True:
 					hd["temp"] = int(disk_temp.split()[3])
 				except:
 					# No temperature found
-					pass
+					print(datetime.datetime.today().strftime('%m-%d-%Y %H:%M:%S') + " - ", end = "")
+					print("Could not get temperature for drive /dev/" + hd["node"])
+					raise
 			hd_temps += str(hd["temp"]) + " "
 			for shelf in range(0,num_chassis):
 				if hd["shelf"] == shelf and hd["temp"] > max_hd_temp[shelf]:
